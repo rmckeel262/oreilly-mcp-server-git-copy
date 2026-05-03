@@ -1,9 +1,15 @@
 #!/usr/bin/env node
+import https from "node:https";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
 const OREILLY_API_KEY = process.env.OREILLY_API_KEY;
+const OREILLY_SEARCH_API_URL =
+  process.env.OREILLY_SEARCH_API_URL ?? "https://learning.oreilly.com/api/v2/search/";
+const OREILLY_API_TIMEOUT_MS = 10000;
+const OREILLY_MAX_RETRIES = 2;
+const OREILLY_MAX_REDIRECTS = 5;
 
 if (!OREILLY_API_KEY) {
   console.error("Missing OREILLY_API_KEY environment variable");
@@ -18,22 +24,189 @@ const server = new McpServer({
 function jsonText(data) {
   return JSON.stringify(data, null, 2);
 }
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildOReillyHeaders() {
+  return {
+    Accept: "application/json",
+    Authorization: `Bearer ${OREILLY_API_KEY}`,
+    "X-API-Key": OREILLY_API_KEY,
+    "User-Agent": "oreilly-mcp-server/1.0.0",
+  };
+}
+
+function toAbsoluteOReillyUrl(pathOrUrl) {
+  if (!pathOrUrl) {
+    return null;
+  }
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+    return pathOrUrl;
+  }
+  return `https://www.oreilly.com${pathOrUrl}`;
+}
+
+function parseAuthors(authors) {
+  if (!Array.isArray(authors)) {
+    return "";
+  }
+
+  const names = authors
+    .map((author) =>
+      typeof author === "string" ? author : author?.name ?? author?.full_name ?? ""
+    )
+    .filter(Boolean);
+  return names.join(", ");
+}
+
+function parseErrorMessage(payload, rawBody) {
+  if (typeof payload === "string" && payload.trim().length > 0) {
+    return payload.trim();
+  }
+  if (payload && typeof payload === "object") {
+    if (typeof payload.detail === "string" && payload.detail.trim().length > 0) {
+      return payload.detail.trim();
+    }
+    if (typeof payload.message === "string" && payload.message.trim().length > 0) {
+      return payload.message.trim();
+    }
+    if (Array.isArray(payload.errors) && payload.errors.length > 0) {
+      return payload.errors
+        .map((error) =>
+          typeof error === "string" ? error : error?.message ?? JSON.stringify(error)
+        )
+        .join("; ");
+    }
+  }
+  if (typeof rawBody === "string" && rawBody.trim().length > 0) {
+    return rawBody.trim().slice(0, 300);
+  }
+  return "Unknown API error";
+}
+
+function isRetryableStatus(statusCode) {
+  return statusCode === 429 || statusCode >= 500;
+}
+function isRedirectStatus(statusCode) {
+  return [301, 302, 303, 307, 308].includes(statusCode);
+}
+
+function getJson(url, headers, redirectCount = 0) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, { method: "GET", headers }, (res) => {
+      let rawBody = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => {
+        rawBody += chunk;
+      });
+      res.on("end", () => {
+        const statusCode = res.statusCode ?? 0;
+        const locationHeader = res.headers.location;
+        if (isRedirectStatus(statusCode) && locationHeader) {
+          if (redirectCount >= OREILLY_MAX_REDIRECTS) {
+            reject(
+              new Error(
+                `Exceeded maximum redirects (${OREILLY_MAX_REDIRECTS}) while requesting ${url}`
+              )
+            );
+            return;
+          }
+
+          const nextUrl = new URL(locationHeader, url).toString();
+          getJson(nextUrl, headers, redirectCount + 1).then(resolve).catch(reject);
+          return;
+        }
+        let payload = null;
+        if (rawBody.length > 0) {
+          try {
+            payload = JSON.parse(rawBody);
+          } catch {
+            payload = null;
+          }
+        }
+        resolve({
+          statusCode,
+          payload,
+          rawBody,
+          location: locationHeader ?? null,
+        });
+      });
+    });
+
+    req.setTimeout(OREILLY_API_TIMEOUT_MS, () => {
+      req.destroy(new Error(`request timed out after ${OREILLY_API_TIMEOUT_MS}ms`));
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
 
 async function searchBooks(query, limit = 10) {
-  return {
-    results: [
-      {
-        id: "9781491912127",
-        title: `${query} - Comprehensive Guide`,
-        author: "O'Reilly Authors",
-        description: `Learn everything about ${query}`,
-        url: `https://www.oreilly.com/search/?query=${encodeURIComponent(query)}`,
-        published_date: "2024",
-      },
-    ],
-    total: 1,
-    limit,
-  };
+  const searchUrl = new URL(OREILLY_SEARCH_API_URL);
+  searchUrl.searchParams.set("query", query);
+  searchUrl.searchParams.set("formats", "book");
+  searchUrl.searchParams.set("sort", "relevance");
+  searchUrl.searchParams.set("page", "0");
+  searchUrl.searchParams.set("include_facets", "false");
+
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= OREILLY_MAX_RETRIES; attempt += 1) {
+    try {
+      const { statusCode, payload, rawBody, location } = await getJson(
+        searchUrl.toString(),
+        buildOReillyHeaders()
+      );
+
+      if (statusCode >= 200 && statusCode < 300) {
+        const allResults = Array.isArray(payload?.results) ? payload.results : [];
+        const results = allResults.slice(0, limit).map((book) => ({
+          id: book.archive_id ?? book.isbn ?? book.id ?? "",
+          title: book.title ?? "Untitled",
+          author: parseAuthors(book.authors),
+          description: book.description ?? "",
+          url:
+            toAbsoluteOReillyUrl(book.web_url) ??
+            toAbsoluteOReillyUrl(book.url) ??
+            `https://www.oreilly.com/search/?query=${encodeURIComponent(query)}`,
+          published_date: book.issued ?? book.date_added ?? null,
+        }));
+
+        return {
+          results,
+          total: typeof payload?.total === "number" ? payload.total : allResults.length,
+          limit,
+          query,
+        };
+      }
+
+      const message = parseErrorMessage(payload, rawBody);
+      const redirectSuffix = location ? ` (redirected to: ${location})` : "";
+      const apiError = new Error(
+        `O'Reilly search request failed with status ${statusCode}: ${message}${redirectSuffix}`
+      );
+
+      if (isRetryableStatus(statusCode) && attempt < OREILLY_MAX_RETRIES) {
+        await delay(300 * 2 ** attempt);
+        continue;
+      }
+
+      throw apiError;
+    } catch (error) {
+      lastError = error;
+      if (attempt < OREILLY_MAX_RETRIES) {
+        await delay(300 * 2 ** attempt);
+        continue;
+      }
+    }
+  }
+
+  throw new Error(
+    `Unable to complete O'Reilly search_books request after ${
+      OREILLY_MAX_RETRIES + 1
+    } attempts: ${lastError?.message ?? "Unknown error"}`
+  );
 }
 
 async function searchTopics(topic, contentType = "all") {
