@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "web": "node web-server.js",
+    "web:dev": "node --watch web-server.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

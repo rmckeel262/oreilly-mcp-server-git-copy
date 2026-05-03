@@ -22,6 +22,25 @@ Model Context Protocol (MCP) stdio server for O'Reilly learning tools.
    npm start
    ```
 
+## Browser app (GUI)
+Launch the visual learning app:
+
+1. Ensure your API key is set:
+   ```bash
+   export OREILLY_API_KEY="{{OREILLY_API_KEY}}"
+   ```
+2. Start the web app server:
+   ```bash
+   npm run web
+   ```
+3. Open `http://localhost:4173` in your browser.
+
+### What you can do in the GUI
+- Search O'Reilly books in real time
+- Open book pages directly on O'Reilly
+- Save books to a personal learning list
+- Keep your saved list in browser storage between sessions
+
 ## Warp MCP config example
 Use this in `.mcp.json`:
 ```json
