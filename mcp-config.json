@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "oreilly-learning": {
+      "command": "node",
+      "args": ["/Users/abhisheksaxena/oreilly-mcp-server/server.js"],
+      "description": "O'Reilly Learning Platform MCP Server",
+      "env": {
+        "OREILLY_API_KEY": "${OREILLY_API_KEY}"
+      }
+    }
+  }
+}
