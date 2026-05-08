@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>O'Reilly Learning Journey</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Learning Companion</p>
+          <h1>Build your O'Reilly learning journey</h1>
+          <p class="subtitle">
+            Search books in real time, bookmark what matters, and keep your learning queue focused.
+          </p>
+        </div>
+        <div class="hero-badge">
+          <span id="savedCount">0</span>
+          <small>Saved books</small>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel search-panel">
+          <form id="searchForm" class="search-form">
+            <label class="label" for="query">What do you want to learn next?</label>
+            <div class="search-row">
+              <input id="query" name="query" type="text" placeholder="Try: machine learning, system design, python..." required />
+              <select id="limit" name="limit" aria-label="Number of results">
+                <option value="5">5 results</option>
+                <option value="10" selected>10 results</option>
+                <option value="15">15 results</option>
+                <option value="20">20 results</option>
+              </select>
+              <button id="searchButton" type="submit">Search</button>
+            </div>
+          </form>
+          <div class="filters-row">
+            <input id="resultsFilterText" type="text" placeholder="Filter current results by title or author" />
+            <select id="resultsSavedFilter" aria-label="Filter by saved state">
+              <option value="all" selected>All results</option>
+              <option value="unsaved">Not saved</option>
+              <option value="saved">Saved only</option>
+            </select>
+          </div>
+          <div class="quick-tags">
+            <button class="tag" data-query="machine learning">Machine Learning</button>
+            <button class="tag" data-query="python">Python</button>
+            <button class="tag" data-query="system design">System Design</button>
+            <button class="tag" data-query="cloud architecture">Cloud Architecture</button>
+          </div>
+          <p id="status" class="status">Search to begin your session.</p>
+          <div id="results" class="results"></div>
+        </section>
+
+        <aside class="panel learning-list-panel">
+          <div class="panel-heading">
+            <h2>My learning list</h2>
+            <button id="clearListButton" class="ghost-button" type="button">Clear</button>
+          </div>
+          <p class="panel-subtitle">Saved in your browser so you can continue where you left off.</p>
+          <div class="progress-overview">
+            <div class="progress-chip progress-to-learn">
+              <strong id="toLearnCount">0</strong>
+              <span>To Learn</span>
+            </div>
+            <div class="progress-chip progress-in-progress">
+              <strong id="inProgressCount">0</strong>
+              <span>In Progress</span>
+            </div>
+            <div class="progress-chip progress-completed">
+              <strong id="completedCount">0</strong>
+              <span>Completed</span>
+            </div>
+          </div>
+          <p id="completionRate" class="completion-rate">0% completed</p>
+          <div class="filters-row">
+            <input id="learningFilterText" type="text" placeholder="Filter saved list by title or author" />
+            <select id="learningStatusFilter" aria-label="Filter learning list by progress">
+              <option value="all" selected>All progress states</option>
+              <option value="to_learn">To Learn</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <ul id="learningList" class="learning-list"></ul>
+        </aside>
+      </main>
+    </div>
+
+    <template id="resultCardTemplate">
+      <article class="card">
+        <h3 class="card-title"></h3>
+        <p class="meta"></p>
+        <p class="description"></p>
+        <div class="card-actions">
+          <a class="book-link" target="_blank" rel="noopener noreferrer">Open on O'Reilly</a>
+          <button class="save-button" type="button"></button>
+        </div>
+      </article>
+    </template>
+
+    <template id="savedItemTemplate">
+      <li class="saved-item">
+        <div>
+          <p class="saved-title"></p>
+          <p class="saved-meta"></p>
+        </div>
+        <div class="saved-footer">
+          <select class="progress-select" aria-label="Update learning progress">
+            <option value="to_learn">To Learn</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <div class="saved-actions">
+            <a class="saved-link" target="_blank" rel="noopener noreferrer">Open</a>
+            <button class="remove-button" type="button">Remove</button>
+          </div>
+        </div>
+      </li>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
