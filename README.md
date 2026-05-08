@@ -41,6 +41,19 @@ Launch the visual learning app:
 - Save books to a personal learning list
 - Keep your saved list in browser storage between sessions
 
+## Always-on deployment (Railway)
+This repository includes `railway.json` so Railway deploys the GUI app with health checks and restart policy.
+
+1. Create a new Railway project from this repository.
+2. Set required variable in Railway service settings:
+   - `OREILLY_API_KEY`
+3. Deploy the service.
+4. Open the generated Railway domain (or attach your custom domain).
+
+The deployed service runs:
+- `node web-server.js`
+- Health check path: `/health`
+
 ## Warp MCP config example
 Use this in `.mcp.json`:
 ```json

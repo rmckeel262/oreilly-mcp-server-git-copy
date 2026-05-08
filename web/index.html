@@ -37,6 +37,14 @@
               <button id="searchButton" type="submit">Search</button>
             </div>
           </form>
+          <div class="filters-row">
+            <input id="resultsFilterText" type="text" placeholder="Filter current results by title or author" />
+            <select id="resultsSavedFilter" aria-label="Filter by saved state">
+              <option value="all" selected>All results</option>
+              <option value="unsaved">Not saved</option>
+              <option value="saved">Saved only</option>
+            </select>
+          </div>
           <div class="quick-tags">
             <button class="tag" data-query="machine learning">Machine Learning</button>
             <button class="tag" data-query="python">Python</button>
@@ -53,6 +61,30 @@
             <button id="clearListButton" class="ghost-button" type="button">Clear</button>
           </div>
           <p class="panel-subtitle">Saved in your browser so you can continue where you left off.</p>
+          <div class="progress-overview">
+            <div class="progress-chip progress-to-learn">
+              <strong id="toLearnCount">0</strong>
+              <span>To Learn</span>
+            </div>
+            <div class="progress-chip progress-in-progress">
+              <strong id="inProgressCount">0</strong>
+              <span>In Progress</span>
+            </div>
+            <div class="progress-chip progress-completed">
+              <strong id="completedCount">0</strong>
+              <span>Completed</span>
+            </div>
+          </div>
+          <p id="completionRate" class="completion-rate">0% completed</p>
+          <div class="filters-row">
+            <input id="learningFilterText" type="text" placeholder="Filter saved list by title or author" />
+            <select id="learningStatusFilter" aria-label="Filter learning list by progress">
+              <option value="all" selected>All progress states</option>
+              <option value="to_learn">To Learn</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
           <ul id="learningList" class="learning-list"></ul>
         </aside>
       </main>
@@ -76,9 +108,16 @@
           <p class="saved-title"></p>
           <p class="saved-meta"></p>
         </div>
-        <div class="saved-actions">
-          <a class="saved-link" target="_blank" rel="noopener noreferrer">Open</a>
-          <button class="remove-button" type="button">Remove</button>
+        <div class="saved-footer">
+          <select class="progress-select" aria-label="Update learning progress">
+            <option value="to_learn">To Learn</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <div class="saved-actions">
+            <a class="saved-link" target="_blank" rel="noopener noreferrer">Open</a>
+            <button class="remove-button" type="button">Remove</button>
+          </div>
         </div>
       </li>
     </template>
